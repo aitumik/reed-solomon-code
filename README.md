@@ -55,6 +55,20 @@ Running the module directly executes the example above:
 python main.py
 ```
 
+## Running tests
+
+Tests use the standard library `unittest` module — no dependencies needed.
+
+```bash
+python3 -m unittest test_main -v
+```
+
+Or run a single test:
+
+```bash
+python3 -m unittest test_main.TestBerlekampMassey.test_single_error_locator_root -v
+```
+
 ## How it works
 
 1. Represent the message bytes as the coefficients of a polynomial `M(x)` over

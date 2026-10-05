@@ -60,25 +60,20 @@ class TestBerlekampMassey(unittest.TestCase):
 
     def test_no_errors_returns_constant_one(self):
         synds = self.codec.decode(self.codeword.coeffs)
-        error_poly = self.codec.berlekamp_massey_second(synds)
+        error_poly = self.codec.berlekamp_massey(synds)
 
         self.assertEqual(
             error_poly.coeffs,
             [1],
             f"Expected Lambda(x) = [1], got {error_poly.coeffs}",
          )
-        
+
     def test_single_error_locator_root(self):
         corrupted = bytearray(self.codeword.coeffs)
         corrupted[5] ^= 0xA5
 
         synds = self.codec.decode(corrupted)
-        error_poly = self.codec.berlekamp_massey_second(synds)
-        lambda_poly = self.codec.berlekamp_massey(synds)
-
-        print(synds)
-        print("[*] right",error_poly)
-        print("[*] wrong",lambda_poly)
+        error_poly = self.codec.berlekamp_massey(synds)
 
         self.assertEqual(
             len(error_poly.coeffs),

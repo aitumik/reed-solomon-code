@@ -20,10 +20,24 @@ class RSCodec:
 
         for n in range(len(synds)):
             d = synds[n]
-
             for i in range(1,L + 1):
+                if i < len(C.coeffs):
+                    d = GF256.add(d,GF256.mul(C.coeffs[i],synds[n - i]))
+            if d == 0:
+                m = m + 1
+            else:
+                T = GF256Poly(list(C.coeffs))
+                # C(x) = C(x) + d * B(x) * x^m
+                d_B_shifted = B.scale(d).shift(m)
+                C = C + d_B_shifted
 
-                d = GF256.add(d,GF256.mul())
+                if 2 * L <= n:
+                    L = n + 1 - L
+                    B = T
+                    m = 1
+                else:
+                    m += 1
+        return C
 
     def encode(self,msg):
 
@@ -78,27 +92,52 @@ class RSCodec:
         """
         synds = self.decode(coeffs)
 
-        largest = 0
+        if all(s == 0 for s in synds):
+            print("Syndromes all ZERO -> No errors detected.")
+            return msg_coeffs
 
-        R_x = GF256Poly(synds)
+        print("There are some errors you need to deal with")
 
-        #largest = max(largest,c.coeffs[0]) for c in R_x.coeffs
-        largest = [max()for c in R_x.coeffs]
+        #R_x = GF256Poly(synds)
+        lambda_x = self.berlekamp_massey(synds)
+        error_pos = self.chien_search(lambda_x,len(coeffs))
+        error_mag = self.forney_algorithm(synds,lambda_x,error_pos)
 
-        """
-        for i in R_x.coeffs:
-            c = i.coeffs[0]
-            largest = max(largest,c)
+        corrected = list(coeffs)
+        for pos,mag in error_mag.items():
+            corrected[pos] = GF256.add(corrected[pos], mag)
 
-        """
+        return corrected
 
+    def chien_search(self,x_poly,msg_len):
+        error_locations = []
+        for i in range(msg_len):
+            X_inv = GF256.pow(2,(255 - i) % 255)
+            res = x_poly.eval(X_inv)
+            if res == 0: 
+                error_locations.append(i)
+        return error_locations
 
-        if largest == 0:
-            print("Syndromes all ZERO -> No errors detected")
-            return coeffs
-        else:
-            print("There are some errors you need to deal with")
+    def forney_algorithm(self,synds,lambda_x,error_positions):
+        S_x = GF256Poly(synds)
 
+        A_x_full = S_x * lambda_x 
+        A_x = GF256Poly(A_x_full.coeffs[:self.nsym])
+
+        A_prime = lambda_x.formal_derivative()
+
+        error_magnitudes = {} 
+
+        for pos in error_positions:
+            X_inv = GF256.pow(2,(255 - pos) % 255)
+
+            num = A_x.eval(X_inv)
+            den = A_prime.eval(X_inv)
+
+            mag = GF256.div(num,den)
+            error_magnitudes[pos] = mag
+
+        return error_magnitudes
 
     def find_error_locations(self,synds):
         """
@@ -115,30 +154,7 @@ class RSCodec:
             alpha_i = GF256.pow(2,i)
 
             factor = GF256Poly([1,alpha_i])
-
-            #print(factor * synds[i])
-
             A_x *= factor
-
-        """
-        for i in range(v):
-            d = synds[i]
-            X_i = GF256.pow(2,i)
-
-            factor = GF256Poly([1,X_i])
-
-
-            A_x *= factor
-
-        # Step 2 : Find the error locations(Chien search)
-        for i in range(v):
-            continue
-
-        # Step 3 : Calculate the error magnitudes(Forney Algo)
-        for i in range(v):
-            continue
-
-        """
 
         return A_x
 
@@ -269,7 +285,22 @@ class GF256Poly:
 
         return GF256Poly(out[:separator]),GF256Poly(out[separator:])
 
-        
+    def scale(self, c):
+        """Multiplies all coefficients by scalar c."""
+        return GF256Poly([GF256.mul(x, c) for x in self.coeffs])
+
+    def shift(self, m):
+        """Multiplies polynomial by x^m (shifts coeffs right)."""
+        return GF256Poly([0] * m + self.coeffs)
+
+    def formal_derivative(self):
+        deriv = [] 
+        for i in range(1,len(self.coeffs)):
+            if i % 2 == 0:
+                deriv.append(i)
+            else:
+                deriv.append(0)
+        return GF256Poly(deriv) if deriv else GF256Poly([0])
 
     def __repr__(self):
 
@@ -303,19 +334,28 @@ if __name__ == "__main__":
 
     C_x = kodek.encode(msg)
 
-    #print("C_x",C_x)
     encoded_msg = bytes(C_x.coeffs)
 
     corrupted_msg = bytearray(encoded_msg)
     corrupted_msg[0] ^= 0xFF
 
-    syndromes = kodek.decode(corrupted_msg)
+    print(f"Corrupted bytes at pos 0.")
 
-    res1 = kodek.berlekamp_massey(syndromes)
-    print("res1",res1)
+    #syndromes = kodek.decode(corrupted_msg)
 
-    #res2 = kodek.berlekamp_massey_second(syndromes)
-    #print("res2",res2)
+    #import pdb; pdb.set_trace()
+    corrected_bytes = kodek.correct_errors(corrupted_msg)
+
+    print("corrected ",corrected_bytes)
+
+    msg_len = len(msg)
+    decoded_str = "".join(chr(b) for b in corrected_bytes[kodek.nsym:kodek.nsym + msg_len])
+
+    print("Decoded Message : ",decoded_str)
+
+    #res1 = kodek.berlekamp_massey(syndromes)
+    #kodek.find_error_locations(res1)
+
 
 
 
