@@ -22,7 +22,7 @@ class RSCodec:
             d = synds[n]
             for i in range(1,L + 1):
                 if i < len(C.coeffs):
-                    d = GF256.add(d,GF256.mul(C.coeffs[i],synds[n - i]))
+                    d = GF256.add(d,GF256.mul(C.coeffs[-(i + 1)],synds[n - i]))
             if d == 0:
                 m = m + 1
             else:
@@ -33,7 +33,7 @@ class RSCodec:
 
                 if 2 * L <= n:
                     L = n + 1 - L
-                    B = T
+                    B = T.scale(GF256.inv(d))
                     m = 1
                 else:
                     m += 1
@@ -94,14 +94,14 @@ class RSCodec:
 
         if all(s == 0 for s in synds):
             print("Syndromes all ZERO -> No errors detected.")
-            return msg_coeffs
+            return list(coeffs)
 
         print("There are some errors you need to deal with")
 
         #R_x = GF256Poly(synds)
         lambda_x = self.berlekamp_massey(synds)
         error_pos = self.chien_search(lambda_x,len(coeffs))
-        error_mag = self.forney_algorithm(synds,lambda_x,error_pos)
+        error_mag = self.forney_algorithm(synds,lambda_x,error_pos,len(coeffs))
 
         corrected = list(coeffs)
         for pos,mag in error_mag.items():
@@ -112,29 +112,31 @@ class RSCodec:
     def chien_search(self,x_poly,msg_len):
         error_locations = []
         for i in range(msg_len):
-            X_inv = GF256.pow(2,(255 - i) % 255)
+            X_inv = GF256.pow(2,(255 - (msg_len - 1 - i)) % 255)
             res = x_poly.eval(X_inv)
             if res == 0: 
                 error_locations.append(i)
         return error_locations
 
-    def forney_algorithm(self,synds,lambda_x,error_positions):
-        S_x = GF256Poly(synds)
+    def forney_algorithm(self,synds,lambda_x,error_positions,msg_len):
+        # Omega(x) = S(x) * Lambda(x) mod x^nsym -> keep the lowest nsym powers
+        S_x = GF256Poly(list(reversed(synds)))
 
         A_x_full = S_x * lambda_x 
-        A_x = GF256Poly(A_x_full.coeffs[:self.nsym])
+        A_x = GF256Poly(A_x_full.coeffs[-self.nsym:])
 
         A_prime = lambda_x.formal_derivative()
 
         error_magnitudes = {} 
 
         for pos in error_positions:
-            X_inv = GF256.pow(2,(255 - pos) % 255)
+            X = GF256.pow(2,(msg_len - 1 - pos) % 255)
+            X_inv = GF256.inv(X)
 
             num = A_x.eval(X_inv)
             den = A_prime.eval(X_inv)
 
-            mag = GF256.div(num,den)
+            mag = GF256.mul(X,GF256.div(num,den))
             error_magnitudes[pos] = mag
 
         return error_magnitudes
@@ -218,6 +220,8 @@ class GF256:
 
     @classmethod
     def pow(cls,a,power):
+        if a == 0:
+            return 0 if power != 0 else 1
         return cls.exp[(cls.log[a] * power) % 255]
 
 
@@ -290,16 +294,16 @@ class GF256Poly:
         return GF256Poly([GF256.mul(x, c) for x in self.coeffs])
 
     def shift(self, m):
-        """Multiplies polynomial by x^m (shifts coeffs right)."""
-        return GF256Poly([0] * m + self.coeffs)
+        """Multiplies polynomial by x^m (appends zeros in descending order)."""
+        return GF256Poly(list(self.coeffs) + [0] * m)
 
     def formal_derivative(self):
-        deriv = [] 
-        for i in range(1,len(self.coeffs)):
-            if i % 2 == 0:
-                deriv.append(i)
-            else:
-                deriv.append(0)
+        # In GF(2^m) the formal derivative keeps only odd-degree terms.
+        n = len(self.coeffs)
+        deriv = []
+        for i in range(n):
+            if (n - 1 - i) % 2 == 1:
+                deriv.append(self.coeffs[i])
         return GF256Poly(deriv) if deriv else GF256Poly([0])
 
     def __repr__(self):
@@ -349,22 +353,9 @@ if __name__ == "__main__":
     print("corrected ",corrected_bytes)
 
     msg_len = len(msg)
-    decoded_str = "".join(chr(b) for b in corrected_bytes[kodek.nsym:kodek.nsym + msg_len])
+    decoded_str = "".join(chr(b) for b in corrected_bytes[:msg_len])
 
     print("Decoded Message : ",decoded_str)
 
     #res1 = kodek.berlekamp_massey(syndromes)
     #kodek.find_error_locations(res1)
-
-
-
-
-
-
-
-
-
-
-
-
-
