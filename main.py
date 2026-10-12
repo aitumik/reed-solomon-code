@@ -8,8 +8,9 @@ error-correcting codes over Galois Field GF(2^8) using polynomial arithmetic
 """
 class RSCodec:
     def __init__(self,n,k):
-        self.nsym = 4
         self.n = n
+        self.k = k
+        self.nsym = n - k
 
     def berlekamp_massey(self,synds):
         C = GF256Poly([1])

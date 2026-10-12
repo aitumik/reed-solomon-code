@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reed-Solomon Codec Playground</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="brand">
+        <span class="brand-mark">RS</span>
+        <div>
+          <h1>Reed-Solomon Codec Playground</h1>
+          <p class="subtitle">
+            Over GF(2<sup>8</sup>) &middot; encode, corrupt, and correct &mdash; step by step
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Step 1: inputs -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step-badge">1</span>
+        <h2>Message &amp; redundancy</h2>
+      </div>
+      <div class="row">
+        <label class="field grow">
+          <span>Message</span>
+          <input id="message" type="text" maxlength="251" spellcheck="false"
+                 value="This is a test message" />
+        </label>
+        <label class="field">
+          <span>Redundancy (nsym)</span>
+          <select id="nsym">
+            <option value="2">2 &mdash; correct 1</option>
+            <option value="4" selected>4 &mdash; correct 2</option>
+            <option value="6">6 &mdash; correct 3</option>
+            <option value="8">8 &mdash; correct 4</option>
+            <option value="10">10 &mdash; correct 5</option>
+            <option value="12">12 &mdash; correct 6</option>
+          </select>
+        </label>
+        <button id="encode" class="btn primary">Encode</button>
+      </div>
+      <p id="encode-error" class="error-text" hidden></p>
+      <p class="muted" id="generator-line" hidden></p>
+    </section>
+
+    <!-- Step 2: corrupt -->
+    <section class="card" id="corrupt-card" hidden>
+      <div class="card-head">
+        <span class="step-badge">2</span>
+        <h2>Transmit through a noisy channel</h2>
+      </div>
+      <p class="muted">
+        Click any byte to corrupt it. Each click XORs the byte with the value below.
+        You can correct up to <strong id="t-label">2</strong> errors.
+      </p>
+      <div class="row controls">
+        <label class="field">
+          <span>Error value (XOR)</span>
+          <input id="error-value" type="text" value="A5" maxlength="4" spellcheck="false" />
+        </label>
+        <button id="randomize" class="btn">Random errors</button>
+        <button id="clear" class="btn ghost">Clear errors</button>
+        <span id="error-count" class="pill ok">0 errors</span>
+      </div>
+
+      <div class="legend">
+        <span class="legend-item"><i class="sw sw-message"></i> message</span>
+        <span class="legend-item"><i class="sw sw-parity"></i> parity</span>
+        <span class="legend-item"><i class="sw sw-corrupt"></i> corrupted</span>
+      </div>
+
+      <div id="codeword" class="bytes"></div>
+    </section>
+
+    <!-- Step 3: decode -->
+    <section class="card" id="decode-card" hidden>
+      <div class="card-head">
+        <span class="step-badge">3</span>
+        <h2>Decode &amp; correct</h2>
+        <button id="decode" class="btn primary right">Decode</button>
+      </div>
+
+      <div id="results" class="results"></div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <span>Reed-Solomon from first principles &middot; Berlekamp&ndash;Massey, Chien search, Forney</span>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

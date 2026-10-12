@@ -23,8 +23,24 @@ project implements the underlying machinery from scratch:
 
 ## Project status
 
-⚠️ **Work in progress.** Encoding is working, but decoding/error correction is
-not implemented yet. See [Roadmap](#roadmap) below.
+Working end to end: encoding, syndrome computation, Berlekamp&ndash;Massey error
+location, Chien search, and Forney error magnitudes all round-trip correctly.
+
+## Interactive demo
+
+A small Flask web app walks through the whole pipeline: encode a message,
+corrupt up to `t = nsym / 2` bytes by clicking them, then decode and watch each
+stage (syndromes, error locator, Chien search, Forney, corrected codeword)
+produced live.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+
+Then open <http://127.0.0.1:5000>.
 
 ## Usage
 
@@ -86,9 +102,10 @@ python3 -m unittest test_main.TestBerlekampMassey.test_single_error_locator_root
 - [x] Polynomial arithmetic over GF(2^8)
 - [x] Generator polynomial construction
 - [x] Encoding (codeword generation)
-- [ ] Syndrome calculation
-- [ ] Decoding / error location (Berlekamp–Massey, Chien search)
-- [ ] Error correction and full end-to-end round-trip
+- [x] Syndrome calculation
+- [x] Decoding / error location (Berlekamp–Massey, Chien search)
+- [x] Error correction and full end-to-end round-trip
+- [x] Interactive Flask demo UI
 
 ## License
 
