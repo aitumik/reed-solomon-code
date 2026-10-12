@@ -42,6 +42,26 @@ python app.py
 
 Then open <http://127.0.0.1:5000>.
 
+## Deploying for free (Render)
+
+The repo includes a [`render.yaml`](render.yaml) blueprint, so Render can build
+and run it with no manual configuration.
+
+1. Push this project to a GitHub repository.
+2. Create a free account at <https://render.com> and choose **New → Blueprint**.
+3. Select the repository. Render reads `render.yaml` and provisions a free web
+   service (`gunicorn app:app`, health check on `/`).
+4. Wait for the first deploy, then open the `*.onrender.com` URL.
+
+Notes on the free tier: the instance sleeps after ~15 minutes of inactivity and
+takes a few seconds to wake on the next request. No credit card is required.
+
+To configure a service manually instead of using the blueprint, set:
+
+- **Build command:** `pip install -r requirements.txt`
+- **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+- **Health check path:** `/`
+
 ## Usage
 
 ```python

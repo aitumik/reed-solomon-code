@@ -9,6 +9,8 @@ corruption, and error correction over GF(2^8). Run with:
 then open http://127.0.0.1:5000
 """
 
+import os
+
 from flask import Flask, jsonify, render_template, request
 
 from main import GF256, RSCodec, build_generator_poly
@@ -160,4 +162,6 @@ def api_decode():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "1") == "1"
+    app.run(debug=debug, host="0.0.0.0", port=port)
